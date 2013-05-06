@@ -174,8 +174,8 @@ static const struct argp_option apo[] = {
         N_ ("Symbol name (%s)")
     }, {
         "coding", 'c', "ENCODING", OPTION_ARG_OPTIONAL,
-        N_ ("Set encoding comment (%s)"
-        " Omit argument to disable the comment")
+        N_ ("Set encoding name for magic comment (%s)"
+        " Omit argument to disable this comment")
     }, {
         0
     }
