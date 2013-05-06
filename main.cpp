@@ -123,6 +123,13 @@ void config2py (const char *filename) {
 
 static error_t apf (int key, char *arg, struct argp_state *state) {
     switch (key) {
+    case 'o': {
+        filebuf *fb = new filebuf;
+        if (!fb->open(arg, ios_base::out)) {
+            argp_failure(state, 1, errno, "Can not open %s", arg);
+        }
+        cout.rdbuf(fb);
+    }
     case 's':
         symbol = arg;
         break;
@@ -160,6 +167,9 @@ static char *aph (int key, const char *text, void *input) {
 
 static const struct argp_option apo[] = {
     {
+        "output", 'o', "FILE", 0,
+        N_ ("Output to FILE")
+    }, {
         "symbol-name", 's', "NAME", 0,
         N_ ("Symbol name (%s)")
     }, {
