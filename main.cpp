@@ -125,7 +125,7 @@ static error_t apf (int key, char *arg, struct argp_state *state) {
     switch (key) {
     case 'o': {
         filebuf *fb = new filebuf;
-        if (!fb->open(arg, ios_base::out)) {
+        if (!fb->open(arg, ios_base::out | ios_base::trunc)) {
             argp_failure(state, 1, errno, "Can not open %s", arg);
         }
         cout.rdbuf(fb);
