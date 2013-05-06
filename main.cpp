@@ -129,6 +129,7 @@ static error_t apf (int key, char *arg, struct argp_state *state) {
             argp_failure(state, 1, errno, "Can not open %s", arg);
         }
         cout.rdbuf(fb);
+        break;
     }
     case 's':
         symbol = arg;
