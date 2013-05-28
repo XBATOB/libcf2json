@@ -48,6 +48,7 @@ void parse_setting (Setting const &set, Json::Value &dest) {
     Setting::Type t = set.getType ();
     switch (t) {
     case Setting::TypeGroup:
+        dest = Json::Value (Json::objectValue); // if group is empty
         for (int i = 0; i < set.getLength(); ++i) {
             Setting const &s = set[i];
             parse_setting (s, dest[s.getName()]);
@@ -55,6 +56,7 @@ void parse_setting (Setting const &set, Json::Value &dest) {
         break;
     case Setting::TypeArray:
     case Setting::TypeList:
+        dest = Json::Value (Json::arrayValue); // if array is empty
         for (int i = 0; i < set.getLength(); ++i) {
             Setting const &s = set[i];
             parse_setting (s, dest[i]);
