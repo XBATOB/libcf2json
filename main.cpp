@@ -35,73 +35,52 @@
 
 #include <libconfig.h++>
 
+#include <json/value.h>
+#include <json/writer.h>
+
 using namespace std;
 using namespace libconfig;
 
 const char *argp_program_version = MY_VERSION;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
-const char *symbol = "config";
-const char *coding = "utf-8";
-
-void print_string (const char *str) {
-    cout << "u'";
-    for (; *str; ++str) {
-        char c;
-        switch (*str) {
-        case '\n': c= 'n'; break;
-        case '\t': c= 't'; break;
-        case '\r': c= 'r'; break;
-        case '\\': c= '\\'; break;
-        case '\'': c= '\''; break;
-        default: cout << *str; continue;
-        }
-        cout << '\\' << c;
-    }
-    cout << '\'';
-}
-
-void parse_setting (Setting const &set) {
+void parse_setting (Setting const &set, Json::Value &dest) {
     Setting::Type t = set.getType ();
     switch (t) {
     case Setting::TypeGroup:
-        cout << '{' << endl;
         for (int i = 0; i < set.getLength(); ++i) {
             Setting const &s = set[i];
-            print_string (s.getName());
-            cout << ':';
-            parse_setting (s);
-            cout << ',' << endl;
+            parse_setting (s, dest[s.getName()]);
         }
-        cout << '}';
         break;
     case Setting::TypeArray:
     case Setting::TypeList:
-        cout << '[' << endl;
         for (int i = 0; i < set.getLength(); ++i) {
             Setting const &s = set[i];
-            parse_setting (s);
-            cout << ',' << endl;
+            parse_setting (s, dest[i]);
         }
-        cout << ']';
         break;
     case Setting::TypeBoolean:
-        cout << (bool) set ? "true" : "false";
+        dest = (bool) set;
         break;
     case Setting::TypeInt:
+        dest = (int) set;
+        break;
     case Setting::TypeInt64:
-        cout << (int) set;
+        dest = (long long int) set;
         break;
     case Setting::TypeString:
-        print_string (set.c_str());
+        dest = set.c_str();
         break;
     case Setting::TypeFloat:
-        cout << (double) set;
+        dest = (double) set;
         break;
+    default:
+        cerr << "setting ignored: " << set.getPath() << endl;
     }
 }
 
-void config2py (const char *filename) {
+void config2json (const char *filename) {
     Config cf;
     try {
         cf.readFile (filename);
@@ -110,35 +89,27 @@ void config2py (const char *filename) {
         return;
     }
 
-    if (coding && *coding)
-        cout << "# -*- coding: " << coding <<" -*-" << endl;
-    cout << symbol << '=';
     try {
-        parse_setting (cf.getRoot());
+        Json::Value root;
+        parse_setting (cf.getRoot(), root);
+        cout << root;
     } catch (SettingException const &e) {
         cerr << e.what() << " on " <<  e.getPath() << endl;
     }
-    cout << endl;
 }
 
 static error_t apf (int key, char *arg, struct argp_state *state) {
     switch (key) {
     case 'o': {
         filebuf *fb = new filebuf;
-        if (!fb->open(arg, ios_base::out | ios_base::trunc)) {
-            argp_failure(state, 1, errno, "Can not open %s", arg);
+        if (!fb->open (arg, ios_base::out | ios_base::trunc)) {
+            argp_failure (state, 1, errno, "Can not open %s", arg);
         }
-        cout.rdbuf(fb);
+        cout.rdbuf (fb);
         break;
     }
-    case 's':
-        symbol = arg;
-        break;
-    case 'c':
-        coding = arg;
-        break;
     case ARGP_KEY_ARG:
-        config2py (arg);
+        config2json (arg);
         break;
     default:
         return  ARGP_ERR_UNKNOWN;
@@ -146,37 +117,10 @@ static error_t apf (int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-char *argp_print_help (const char *fmt, ...) {
-// fmt is always not literal so format __attribute__ is useless
-    char *b;
-    va_list al;
-    va_start (al, fmt);
-    vasprintf (&b, fmt, al);
-    va_end (al);
-    return b;
-}
-
-static char *aph (int key, const char *text, void *input) {
-    switch (key) {
-    case 's':
-        return argp_print_help (text, symbol);
-    case 'c':
-        return argp_print_help (text, coding);
-    }
-    return (char *) text;
-}
-
 static const struct argp_option apo[] = {
     {
         "output", 'o', "FILE", 0,
         N_ ("Output to FILE")
-    }, {
-        "symbol-name", 's', "NAME", 0,
-        N_ ("Symbol name (%s)")
-    }, {
-        "coding", 'c', "ENCODING", OPTION_ARG_OPTIONAL,
-        N_ ("Set encoding name for magic comment (%s)"
-        " Omit argument to disable this comment")
     }, {
         0
     }
@@ -185,8 +129,8 @@ static const struct argp_option apo[] = {
 static const struct argp ap = {
     apo, apf, N_ ("config file..."),
     N_ ("convert configuration from libconfig format"
-    " to Python variable definition"),
-    0, aph
+    " to JSON one"),
+    0, 0
 };
 
 int main (int argc, char *argv[]) {
