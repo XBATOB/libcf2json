@@ -6,6 +6,7 @@ pkg_check_modules(MODS REQUIRED
     libconfig++
     jsoncpp
 )
+add_definitions(-DENABLE_NLS)
 include_directories(${MODS_INCLUDE_DIRS})
 
 add_executable(libcf2json main.cpp)

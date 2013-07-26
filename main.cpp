@@ -19,12 +19,15 @@
 #define LOCALEDIR NULL
 #endif
 
+#ifndef PACKAGE
+#define PACKAGE "libcf2json"
+#endif
+
 #ifndef PACKAGE_STRING
-#define PACKAGE_STRING "template 0.0"
+#define PACKAGE_STRING PACKAGE " 0.0"
 #define PACKAGE_BUGREPORT "Sergey Khvatov <xbatob@grouptechno.ru>"
 #endif
-#define MY_VERSION     PACKAGE_STRING \
-    "\n$Id: $"
+#define MY_VERSION     PACKAGE_STRING
 
 #include <locale.h>
 #include <argp.h>
@@ -40,15 +43,16 @@
 
 using namespace std;
 using namespace libconfig;
+using namespace Json;
 
 const char *argp_program_version = MY_VERSION;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
-void parse_setting (Setting const &set, Json::Value &dest) {
+void parse_setting (Setting const &set, Value &dest) {
     Setting::Type t = set.getType ();
     switch (t) {
     case Setting::TypeGroup:
-        dest = Json::Value (Json::objectValue); // if group is empty
+        dest = Value (objectValue); // if group is empty
         for (int i = 0; i < set.getLength(); ++i) {
             Setting const &s = set[i];
             parse_setting (s, dest[s.getName()]);
@@ -56,7 +60,7 @@ void parse_setting (Setting const &set, Json::Value &dest) {
         break;
     case Setting::TypeArray:
     case Setting::TypeList:
-        dest = Json::Value (Json::arrayValue); // if array is empty
+        dest = Value (arrayValue); // if array is empty
         for (int i = 0; i < set.getLength(); ++i) {
             Setting const &s = set[i];
             parse_setting (s, dest[i]);
@@ -78,23 +82,25 @@ void parse_setting (Setting const &set, Json::Value &dest) {
         dest = (double) set;
         break;
     default:
-        cerr << "setting ignored: " << set.getPath() << endl;
+        cerr << _("setting ignored: ") << set.getPath() << endl;
     }
 }
+
+const char *root;
 
 void config2json (const char *filename) {
     Config cf;
     try {
         cf.readFile (filename);
     } catch (ConfigException const &e) {
-        cerr << filename << ": load error: " << e.what() << endl;
+        cerr << filename << _(": load error: ") << e.what() << endl;
         return;
     }
 
     try {
-        Json::Value root;
-        parse_setting (cf.getRoot(), root);
-        cout << root;
+        Value root_val;
+        parse_setting (root ? cf.lookup(root) : cf.getRoot(), root_val);
+        cout << root_val;
     } catch (SettingException const &e) {
         cerr << e.what() << " on " <<  e.getPath() << endl;
     }
@@ -105,11 +111,14 @@ static error_t apf (int key, char *arg, struct argp_state *state) {
     case 'o': {
         filebuf *fb = new filebuf;
         if (!fb->open (arg, ios_base::out | ios_base::trunc)) {
-            argp_failure (state, 1, errno, "Can not open %s", arg);
+            argp_failure (state, 1, errno, _("Can not open %s"), arg);
         }
         cout.rdbuf (fb);
         break;
     }
+    case 'r':
+        root = arg;
+        break;
     case ARGP_KEY_ARG:
         config2json (arg);
         break;
@@ -123,6 +132,9 @@ static const struct argp_option apo[] = {
     {
         "output", 'o', "FILE", 0,
         N_ ("Output to FILE")
+    }, {
+        "root", 'r', "SETTING", 0,
+        N_ ("Convert only given subtree")
     }, {
         0
     }
