@@ -92,6 +92,10 @@ void config2json (const char *filename) {
     Config cf;
     try {
         cf.readFile (filename);
+    } catch (ParseException const &e) {
+        cerr << filename << _(": load error: ") << e.what() <<
+        " at " << e.getFile() << " line " << e.getLine() << endl;
+        return;
     } catch (ConfigException const &e) {
         cerr << filename << _(": load error: ") << e.what() << endl;
         return;
@@ -102,7 +106,7 @@ void config2json (const char *filename) {
         parse_setting (root ? cf.lookup(root) : cf.getRoot(), root_val);
         cout << root_val;
     } catch (SettingException const &e) {
-        cerr << e.what() << " on " <<  e.getPath() << endl;
+        cerr << e.what() << " on setting " <<  e.getPath() << endl;
     }
 }
 
