@@ -1,6 +1,6 @@
 Name:           libcf2json
 Version:        1.0.0
-Release:        1
+Release:        2
 License:        unknown
 Group:          unknown
 Vendor:         RuToll.RU

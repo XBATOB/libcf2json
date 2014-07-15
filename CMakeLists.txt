@@ -30,4 +30,10 @@ add_custom_target(${PACKAGE_NAME}.tar.gz
     --dereference --no-recursion --show-transformed -T FILES
     DEPENDS FILES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
+add_custom_target(arch DEPENDS ${PACKAGE_NAME}.tar.gz)
+add_custom_target(srpm
+    rpmbuild -ts ${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE_NAME}.tar.gz
+    DEPENDS arch)
+add_custom_target(rpm
+    rpmbuild -ta ${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE_NAME}.tar.gz
+    DEPENDS arch)
